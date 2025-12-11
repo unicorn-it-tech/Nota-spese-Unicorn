@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invio Nota Spese - Consorzio Unicorn</title>
+    <style>
+        /* Stile base per un look pulito e mobile-friendly */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        input[type="email"], 
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box; /* Assicura che il padding non aumenti la larghezza */
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        /* Messaggi di stato */
+        #statusMessage {
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .success { color: green; }
+        .error { color: red; }
+        
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #3498db;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Nota Spese</h2>
+        <form id="expenseForm">
+            <div class="form-group">
+                <label for="email">La tua Email</label>
+                <input type="email" id="email" name="email" placeholder="nome@azienda.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="receipt">Carica Scontrino (Immagine)</label>
+                <input type="file" id="receipt" name="receipt" accept="image/*" required>
+            </div>
+
+            <button type="submit" id="submitBtn">Invia Nota Spese</button>
+        </form>
+        <div id="statusMessage"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('expenseForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // URL del Webhook n8n
+        const WEBHOOK_URL = 'https://consorziounicorn.app.n8n.cloud/webhook-test/b260e465-cf5e-4103-a0b4-108f8c671f68';
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault(); // Evita il ricaricamento della pagina standard
+
+            // 1. Preparazione UI (Loading state)
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loader"></span> Invio in corso...';
+            statusMessage.style.display = 'none';
+
+            // 2. Raccolta dati
+            const email = document.getElementById('email').value;
+            const fileInput = document.getElementById('receipt');
+            const file = fileInput.files[0];
+
+            // 3. Creazione oggetto FormData per invio multipart/form-data
+            // Questo permette di inviare file binari e testo insieme
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('file', file); // 'file' è la chiave che vedrai in n8n
+
+            try {
+                // 4. Invio richiesta POST
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Successo
+                    statusMessage.textContent = "✅ Inviato con successo!";
+                    statusMessage.className = "success";
+                    statusMessage.style.display = 'block';
+                    form.reset(); // Pulisce il form
+                } else {
+                    // Errore dal server
+                    throw new Error('Errore nella risposta del server');
+                }
+
+            } catch (error) {
+                // Gestione Errori di rete o del server
+                console.error('Errore:', error);
+                statusMessage.textContent = "❌ Errore durante l'invio. Riprova.";
+                statusMessage.className = "error";
+                statusMessage.style.display = 'block';
+            } finally {
+                // Ripristino bottone
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Invia Nota Spese';
+            }
+        });
+    </script>
+</body>
+</html>
